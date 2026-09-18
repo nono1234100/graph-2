@@ -17,11 +17,12 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
 
-    # 문자열 변환 및 장르 정제
+    # 문자열 변환 및 장르/국가 결측치 처리
     df["movieCd"] = df["movieCd"].astype(str)
-    df["genre"] = df["genre"].astype(str).str.split("|").str[0]
+    df["genre"] = df["genre"].fillna("기타").astype(str).str.split("|").str[0]
+    df["nation"] = df["nation"].fillna("기타").astype(str)
 
-    # 트리맵 중복 에러 방지를 위해 movieCd 기준 고유한 영화만 남김
+    # 중복 영화 제거
     df = df.drop_duplicates(subset=["movieCd"]).reset_index(drop=True)
 
     return df
@@ -60,17 +61,15 @@ st.markdown(
 st.write("")
 
 # ---------------------------------------------------------
-# 2. 장르 및 영화별 총 관객 수 (트리맵 - 안전한 graph_objects 방식)
+# 2. 장르 및 영화별 총 관객 수 (트리맵)
 # ---------------------------------------------------------
 st.header("2. 장르별 영화 총 관객 수 분포 (트리맵)")
 
-# 계층 구조 데이터 생성 (전체 -> 장르 -> 영화)
 labels = ["전체 장르"]
 parents = [""]
 values = [df["total_audi"].sum()]
 customdata = ["전체"]
 
-# 1단계: 장르 노드 추가
 genre_sum = df.groupby("genre")["total_audi"].sum().reset_index()
 for _, row in genre_sum.iterrows():
     labels.append(row["genre"])
@@ -78,12 +77,11 @@ for _, row in genre_sum.iterrows():
     values.append(row["total_audi"])
     customdata.append(row["genre"])
 
-# 2단계: 영화 노드 추가
 for _, row in df.iterrows():
-    labels.append(row["movieCd"])  # 고유 ID 사용
+    labels.append(row["movieCd"])
     parents.append(row["genre"])
     values.append(row["total_audi"])
-    customdata.append(row["movieNm"])  # 툴팁에 표시할 영화 이름
+    customdata.append(row["movieNm"])
 
 fig2 = go.Figure(
     go.Treemap(
@@ -263,13 +261,17 @@ st.markdown(
 st.write("")
 
 # ---------------------------------------------------------
-# 7. 국가 및 장르별 영화 편수 (선버스트 차트)
+# 7. 국가 및 장르별 영화 편수 (선버스트 차트 - 오류 수정됨)
 # ---------------------------------------------------------
 st.header("7. 국가 및 장르별 영화 편수 (선버스트 차트)")
 
+# 선버스트용 집계 데이터 사전 생성 (path 중복 및 결측치 에러 해결)
+sunburst_df = df.groupby(["nation", "genre"]).size().reset_index(name="count")
+
 fig7 = px.sunburst(
-    df,
+    sunburst_df,
     path=["nation", "genre"],
+    values="count",
     title="제작 국가 및 장르별 영화 편수 비율 (칸 크기: 영화 편수)",
     color="nation",
 )
