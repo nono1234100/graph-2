@@ -16,11 +16,15 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
 
-    # Plotly Treemap/Sunburst 계층 생성을 위해 movieCd를 문자열(str)로 변환
+    # 1. movieCd를 문자열 타입으로 변환
     df["movieCd"] = df["movieCd"].astype(str)
 
-    # 장르 전처리: 첫 번째 장르만 사용
+    # 2. 장르 전처리: 첫 번째 장르만 사용
     df["genre"] = df["genre"].astype(str).str.split("|").str[0]
+
+    # 3. 트리맵 리프 노드 중복 방지를 위한 movieCd 기준 중복 제거
+    df = df.drop_duplicates(subset=["movieCd"]).reset_index(drop=True)
+
     return df
 
 
@@ -61,7 +65,6 @@ st.write("")
 # ---------------------------------------------------------
 st.header("2. 장르별 영화 총 관객 수 분포 (트리맵)")
 
-# movieCd(문자열)를 리프 노드로 사용하여 고유성 보장
 fig2 = px.treemap(
     df,
     path=[px.Constant("전체 장르"), "genre", "movieCd"],
