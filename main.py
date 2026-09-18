@@ -16,7 +16,10 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
 
-    # 장르 전처리: .str.split().str[0]을 사용하여 안전하게 첫 번째 장르만 추출
+    # Plotly Treemap/Sunburst 계층 생성을 위해 movieCd를 문자열(str)로 변환
+    df["movieCd"] = df["movieCd"].astype(str)
+
+    # 장르 전처리: 첫 번째 장르만 사용
     df["genre"] = df["genre"].astype(str).str.split("|").str[0]
     return df
 
@@ -28,11 +31,9 @@ df = load_data()
 # ---------------------------------------------------------
 st.header("1. 장르별 영화 편수 분포")
 
-# 장르별 편수 집계
 genre_counts = df["genre"].value_counts().reset_index()
 genre_counts.columns = ["genre", "count"]
 
-# Plotly 도넛 그래프 생성
 fig1 = px.pie(
     genre_counts,
     values="count",
@@ -60,7 +61,7 @@ st.write("")
 # ---------------------------------------------------------
 st.header("2. 장르별 영화 총 관객 수 분포 (트리맵)")
 
-# movieCd를 사용해 리프 노드의 고유성 보장 후 movieNm을 표시
+# movieCd(문자열)를 리프 노드로 사용하여 고유성 보장
 fig2 = px.treemap(
     df,
     path=[px.Constant("전체 장르"), "genre", "movieCd"],
@@ -103,7 +104,6 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width=True)
 
-# 주요 통계 동적 계산
 top_movie = df.loc[df["total_audi"].idxmax()]
 top_movie_name = top_movie["movieNm"]
 top_movie_audi = top_movie["total_audi"]
@@ -158,7 +158,6 @@ st.write("")
 # ---------------------------------------------------------
 st.header("5. 주요 장르별 총 관객 수 분포 (박스플롯)")
 
-# 영화 수 10편 이상인 장르만 추출
 genre_counts_series = df["genre"].value_counts()
 top_genres = genre_counts_series[genre_counts_series >= 10].index
 filtered_df = df[df["genre"].isin(top_genres)]
