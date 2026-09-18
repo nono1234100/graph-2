@@ -1,6 +1,7 @@
 # main.py
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(
@@ -16,13 +17,11 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
 
-    # 1. movieCd를 문자열 타입으로 변환
+    # 문자열 변환 및 장르 정제
     df["movieCd"] = df["movieCd"].astype(str)
-
-    # 2. 장르 전처리: 첫 번째 장르만 사용
     df["genre"] = df["genre"].astype(str).str.split("|").str[0]
 
-    # 3. 트리맵 리프 노드 중복 방지를 위한 movieCd 기준 중복 제거
+    # 트리맵 중복 에러 방지를 위해 movieCd 기준 고유한 영화만 남김
     df = df.drop_duplicates(subset=["movieCd"]).reset_index(drop=True)
 
     return df
@@ -61,21 +60,45 @@ st.markdown(
 st.write("")
 
 # ---------------------------------------------------------
-# 2. 장르 및 영화별 총 관객 수 (트리맵)
+# 2. 장르 및 영화별 총 관객 수 (트리맵 - 안전한 graph_objects 방식)
 # ---------------------------------------------------------
 st.header("2. 장르별 영화 총 관객 수 분포 (트리맵)")
 
-fig2 = px.treemap(
-    df,
-    path=[px.Constant("전체 장르"), "genre", "movieCd"],
-    values="total_audi",
-    title="장르 및 영화별 총 관객 수 (칸 크기: 총 관객 수)",
-    color="genre",
-    hover_data={"movieNm": True, "movieCd": False, "total_audi": ":,f"},
+# 계층 구조 데이터 생성 (전체 -> 장르 -> 영화)
+labels = ["전체 장르"]
+parents = [""]
+values = [df["total_audi"].sum()]
+customdata = ["전체"]
+
+# 1단계: 장르 노드 추가
+genre_sum = df.groupby("genre")["total_audi"].sum().reset_index()
+for _, row in genre_sum.iterrows():
+    labels.append(row["genre"])
+    parents.append("전체 장르")
+    values.append(row["total_audi"])
+    customdata.append(row["genre"])
+
+# 2단계: 영화 노드 추가
+for _, row in df.iterrows():
+    labels.append(row["movieCd"])  # 고유 ID 사용
+    parents.append(row["genre"])
+    values.append(row["total_audi"])
+    customdata.append(row["movieNm"])  # 툴팁에 표시할 영화 이름
+
+fig2 = go.Figure(
+    go.Treemap(
+        labels=labels,
+        parents=parents,
+        values=values,
+        customdata=customdata,
+        hovertemplate="<b>%{customdata}</b><br>총 관객 수: %{value:,.0f}명<extra></extra>",
+        branchvalues="total",
+    )
 )
 
-fig2.update_traces(
-    hovertemplate="<b>%{customdata[0]}</b><br>총 관객 수: %{value:,.0f}명"
+fig2.update_layout(
+    title="장르 및 영화별 총 관객 수 (칸 크기: 총 관객 수)",
+    margin=dict(t=50, l=25, r=25, b=25),
 )
 
 st.plotly_chart(fig2, use_container_width=True)
