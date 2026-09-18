@@ -60,16 +60,18 @@ st.write("")
 # ---------------------------------------------------------
 st.header("2. 장르별 영화 총 관객 수 분포 (트리맵)")
 
+# movieCd를 사용해 리프 노드의 고유성 보장 후 movieNm을 표시
 fig2 = px.treemap(
     df,
-    path=[px.Constant("전체 장르"), "genre", "movieNm"],
+    path=[px.Constant("전체 장르"), "genre", "movieCd"],
     values="total_audi",
     title="장르 및 영화별 총 관객 수 (칸 크기: 총 관객 수)",
     color="genre",
+    hover_data={"movieNm": True, "movieCd": False, "total_audi": ":,f"},
 )
 
 fig2.update_traces(
-    hovertemplate="<b>%{label}</b><br>총 관객 수: %{value:,.0f}명"
+    hovertemplate="<b>%{customdata[0]}</b><br>총 관객 수: %{value:,.0f}명"
 )
 
 st.plotly_chart(fig2, use_container_width=True)
