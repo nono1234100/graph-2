@@ -16,8 +16,8 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
 
-    # 장르 전처리: 세로막대 기호(|)로 여러 개 적힌 경우 첫 번째 장르만 사용
-    df["genre"] = df["genre"].astype(str).apply(lambda x: x.split("|")[0])
+    # 장르 전처리: .str.split().str[0]을 사용하여 안전하게 첫 번째 장르만 추출
+    df["genre"] = df["genre"].astype(str).str.split("|").str[0]
     return df
 
 
@@ -240,7 +240,6 @@ st.write("")
 # ---------------------------------------------------------
 st.header("7. 국가 및 장르별 영화 편수 (선버스트 차트)")
 
-# 국가 > 장르 계층 구조 선버스트 그래프 생성
 fig7 = px.sunburst(
     df,
     path=["nation", "genre"],
